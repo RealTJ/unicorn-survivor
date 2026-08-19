@@ -11,14 +11,17 @@ export function createWorld({
   const set = (x: number, y: number, value: number) =>
     (_world[getIndex(x, y)] = value);
   const reset = () => _world.fill(0);
+  const center = [Math.floor(height / 2), Math.floor(width / 2)];
   return {
     _world,
     height,
     width,
     dimension: [height, width],
+    center,
     get,
     set,
     getIndex,
     reset,
   };
 }
+export type World = ReturnType<typeof createWorld>;

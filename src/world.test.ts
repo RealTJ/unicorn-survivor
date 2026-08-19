@@ -11,6 +11,7 @@ describe("world", () => {
     expect(world.height).toBe(10);
     expect(world.width).toBe(10);
     expect(world.dimension).toEqual([10, 10]);
+    expect(world.center).toEqual([5, 5]);
   });
   it("should only output correct indexes", () => {
     expect(world.getIndex(5, 5)).toBe(55);
