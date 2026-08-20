@@ -2,15 +2,19 @@
   "name": "unicorn-survivor",
   "version": "1.0.0",
   "description": "",
-  "main": "dist/index.js",
+  "main": "dist/main.js",
   "type": "module",
   "scripts": {
-    "build": "tsc",
+    "dev": "vite",
+    "build": "vite build && node scripts/package-build.mjs",
     "test": "vitest"
   },
   "devDependencies": {
+    "fflate": "0.8.3",
     "prettier": "3.9.6",
     "typescript": "7.0.2",
+    "vite": "8.2.1",
+    "vite-plugin-singlefile": "2.3.3",
     "vitest": "4.1.10"
   },
   "private": true
