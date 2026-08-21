@@ -1,83 +1,73 @@
 ## Me
-Using TypeScript for validation, instead of doing runtime validation?
+For code golfing I want to remove validations from the output, e.g. in this vector class I test for ...rest and x, y, but this is only needed in a "debug" build and not in the final release. As I'm not loading any external data from disk or network.
 
-Using it for code golfing and I want to use asserts so that the code is still clean, but it's not output into the final bundle.
-
-Or should I use a build step that go over all the typescript code and removes the debug / assert statements as I will not load any external code / json ever. Theoretically TypeScript should be enough.
+But while I'm writing the code base I want these asserts to be there.
 
 ## AI Assistant
-TypeScript alone **will not** remove assertion calls or debug statements from your final output. TypeScript's compiler (`tsc`) only performs **type erasure**—it removes type annotations, interfaces, and types, but it explicitly avoids altering or optimizing your runtime JavaScript logic.
+That's a classic "dead code elimination" pattern. The trick is to use a global boolean constant (something like `__DEV__`) that a bundler/minifier can replace with a literal `true` or `false` at build time. Once it's a literal `false`, tools like **esbuild** (which Vitest/Vite use under the hood) or **Terser** will completely erase the `if (false) { ... }` block — including the `throw` statements and any error message strings — during the production build. In dev/test mode it stays `true`, so your assertions run normally.
 
-If you write a function call like `assert(condition)`, TypeScript will emit exactly that in the resulting JavaScript.
+Here's how to set that up:
 
-Since you are code golfing and want to keep the final bundle as small as possible, **you must use a build step** (like esbuild, Terser, Rollup, or Vite) to strip out these assertions via Dead Code Elimination (DCE).
+### 1. Declare the global flag's type
 
-Here is the standard and cleanest way to achieve this:
-
-### 1. The TypeScript Setup (Static Validation)
-
-You can use TypeScript's `asserts` keyword to tell the compiler that a condition must be true, keeping your types strict without needing runtime checks in production.
+New file, e.g. `src/globals.d.ts`:
 
 ```typescript
-// Define a global constant that your bundler will replace
-declare const __DEBUG__: boolean;
-
-// A custom assert function using TypeScript's `asserts` signature
-export function assert(condition: any, msg?: string): asserts condition {
-  if (__DEBUG__ && !condition) {
-    throw new Error(msg);
-  }
-}
-
-// Usage in your code
-export function processValue(val: string | null) {
-  // TypeScript will narrow 'val' to 'string' after this line
-  assert(val !== null, "Value cannot be null");
-  
-  // val is now strictly 'string'
-  return val.toUpperCase();
-}
+declare const __DEV__: boolean;
 ```
 
 
-### 2. The Build Step (Dead Code Elimination)
+### 2. Define the flag in your Vite/Vitest config
 
-To prevent `assert` function calls from ending up in your final bundle, you shouldn't just rely on the `__DEBUG__` check inside the function (because the function call `assert(...)` will still be in the bundle). Instead, you wrap the *call* in the debug check, or use a bundler plugin to strip the `assert` calls entirely.
-
-#### Approach A: Strip the calls using a bundler/minifier
-
-Most modern bundlers (like Vite, esbuild, or Webpack using Terser) allow you to define global constants. If you define `__DEBUG__` as `false` during the build, the minifier will see `if (false)` and completely remove the dead code.
-
-To completely remove the function *call* itself, you can use **esbuild's `drop` feature** or a plugin like `@rollup/plugin-strip`.
-
-For example, using esbuild (which Vite uses under the hood):
-```shell script
-esbuild main.ts --bundle --minify --drop:console --drop:debugger
-```
-
-*(Note: esbuild doesn't natively drop custom function calls out-of-the-box via CLI flags, so developers often use pure annotations `/* @__PURE__ */` or Babel plugins like `babel-plugin-unassert` for aggressive golfing).*
-
-#### Approach B: The `if (__DEBUG__)` wrapper pattern
-
-If you want pure dead-code elimination without AST-transform plugins, wrap the checks:
+Since Vitest is built on Vite, you can use the same `define` option there, and reuse the config for your real build if you build with Vite/esbuild.
 
 ```typescript
-declare const __DEBUG__: boolean;
+import { defineConfig } from "vitest/config";
 
-export function processValue(val: string | null) {
-  if (__DEBUG__) {
-    // If __DEBUG__ is replaced with `false` by your bundler, 
-    // the minifier removes this entire block.
-    if (val === null) throw new Error("Null value");
+export default defineConfig({
+  define: {
+    __DEV__: process.env.NODE_ENV !== "production",
+  },
+  test: {
+    // __DEV__ will be `true` here, so asserts run during tests
+  },
+});
+```
+
+
+If your production build uses plain `esbuild` (or `tsup`, which wraps it) instead of Vite, pass the same thing via its `define` option, e.g. `esbuild.build({ define: { __DEV__: "false" } })`, and its minifier will strip the dead branch.
+
+### 3. Guard the validations with `__DEV__`
+
+```typescript
+export class Vector {
+  constructor(
+    public x: number,
+    public y: number,
+    ...rest: number[]
+  ) {
+    if (__DEV__) {
+      if (rest.length > 0) {
+        throw new Error("Vector can only have two dimensions");
+      }
+      if (x <= 0 || y <= 0) {
+        throw new Error("Vector must be positive");
+      }
+    }
   }
-  
-  // You might need a non-null assertion operator (!) here 
-  // since the TS compiler doesn't know the minifier will remove the check.
-  return val!.toUpperCase(); 
+  add(other: Vector) {
+    return new Vector(this.x + other.x, this.y + other.y);
+  }
 }
 ```
 
 
-### Summary
-* **Use TypeScript** for authoring time: It proves your logic is sound based on the types.
-* **Use a Build Step** for compile time: Minifiers (Terser/esbuild) or strippers (`unassert`) are necessary to physically remove the assertion code from your final golfed bundle. TypeScript is not a minifier.
+### Why this works
+
+- During `vitest run`/`vitest`, `__DEV__` is `true`, so the guarded code behaves exactly as before — your tests can still verify the thrown errors.
+- During a production build with `NODE_ENV=production`, `define` substitutes `__DEV__` with the literal `false`. Esbuild/Terser then recognize `if (false) { ... }` as unreachable and drop the entire block, including the `throw new Error(...)` strings — shrinking your golfed output and removing the runtime overhead entirely.
+
+A couple of extra notes:
+
+- Since `...rest` is now unused for its length check outside of `__DEV__`, TypeScript might still keep it in the type signature (needed for the public API), but the runtime check disappears — that's fine, it doesn't affect emitted JS size for the constructor body itself.
+- If you want this pattern everywhere without repeating `if (__DEV__)`, you could write a tiny `invariant(condition, message)` helper and call it plainly; some bundler plugins (e.g. `babel-plugin-dev-expression`, or the `unassert`/`babel-plugin-unassert` ecosystem) are specifically built to strip `invariant`/`assert`-style calls in production builds. But given you're already on esbuild via Vite/Vitest, the `__DEV__` + `define` approach avoids adding another dependency.
