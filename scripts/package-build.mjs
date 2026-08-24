@@ -3,13 +3,15 @@ import { resolve } from "node:path";
 import { zipSync, strToU8 } from "fflate";
 
 const limit = 13_312;
-const htmlPath = resolve("dist/index.html");
-const zipPath = resolve("dist/unicorn-survivor.zip");
+const htmlPath = resolve("build/index.html");
+const zipPath = resolve("build/unicorn-survivor.zip");
 
 const html = await readFile(htmlPath, "utf8");
 const zip = zipSync(
   {
     "index.html": strToU8(html),
+    "brometal.js": await readFile(resolve("build/brometal.js")),
+    "shaders.js": await readFile(resolve("build/shaders.js")),
   },
   {
     level: 9,

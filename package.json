@@ -2,14 +2,17 @@
   "name": "unicorn-survivor",
   "version": "1.0.0",
   "description": "",
-  "main": "dist/main.js",
   "type": "module",
   "scripts": {
-    "dev": "vite",
-    "build": "vite build && node scripts/package-build.mjs",
+    "build:shaders-types": "node scripts/generate-shader-types.mjs",
+    "build:shaders": "pnpm exec brometal prod --js13k",
+    "build:package": "vite build",
+    "build:zip": "node scripts/package-build.mjs",
+    "build": "pnpm run build:shaders && pnpm run build:package && pnpm run build:zip",
     "test": "vitest"
   },
   "devDependencies": {
+    "brometal": "0.18.0",
     "fflate": "0.8.3",
     "prettier": "3.9.6",
     "typescript": "7.0.2",
