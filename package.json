@@ -5,16 +5,17 @@
   "type": "module",
   "scripts": {
     "build:shaders-types": "node scripts/generate-shader-types.mjs",
-    "build:shaders": "pnpm exec brometal prod --js13k",
+    "build:shaders": "pnpm exec brometal prod --js13k && node scripts/minify-brometal.mjs",
     "build:package": "vite build",
     "build:zip": "node scripts/package-build.mjs",
-    "build": "pnpm run build:shaders && pnpm run build:package && pnpm run build:zip",
+    "build": "pnpm run build:shaders-types && pnpm run build:shaders && pnpm run build:package && pnpm run build:zip",
     "test": "vitest"
   },
   "devDependencies": {
     "brometal": "0.18.0",
     "fflate": "0.8.3",
     "prettier": "3.9.6",
+    "terser": "5.50.0",
     "typescript": "7.0.2",
     "vite": "8.2.1",
     "vite-plugin-singlefile": "2.3.3",

@@ -10,8 +10,6 @@ const html = await readFile(htmlPath, "utf8");
 const zip = zipSync(
   {
     "index.html": strToU8(html),
-    "brometal.js": await readFile(resolve("build/brometal.js")),
-    "shaders.js": await readFile(resolve("build/shaders.js")),
   },
   {
     level: 9,

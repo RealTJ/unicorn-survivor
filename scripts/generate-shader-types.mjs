@@ -1,7 +1,7 @@
 import { readFile, writeFile } from "node:fs/promises";
 
 const inputPath = "dist/shaders.js";
-const outputPath = "src/render/shaders.d.ts";
+const outputPath = "src/generated/shaders.d.ts";
 
 const source = await readFile(inputPath, "utf8");
 
