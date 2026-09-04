@@ -1,3 +1,15 @@
+declare type BmShaderSource = readonly [
+  wgsl: string,
+  attributeSizes: readonly number[],
+  instanceAttributeSizes: readonly number[],
+  uniformBytes: number,
+  textureBindings: readonly BmTextureBinding[],
+  storageBindings?: readonly BmStorageBinding[],
+];
+
+declare type BmTextureBinding = readonly [number, number];
+declare type BmStorageBinding = readonly [number, boolean];
+
 declare function bmInit(
   canvas: HTMLCanvasElement,
   clear?: [number, number, number, number],
@@ -6,11 +18,11 @@ declare function bmInit(
 declare function bmProgram(
   wgsl: string,
   options: {
-    a?: number[];
-    i?: number[];
+    a?: readonly number[];
+    i?: readonly number[];
     u?: number;
-    t?: Array<[number, number]>;
-    s?: Array<[number, boolean]>;
+    t?: readonly BmTextureBinding[];
+    s?: readonly BmStorageBinding[];
     fmt?: number;
     blend?: boolean;
     cull?: boolean;

@@ -1,12 +1,19 @@
-import { createWorld } from "./world/world.ts";
 import { V2 } from "./utils/vector2.ts";
-import { createRender } from "./render/brometal-example.ts";
+import { createRenderer } from "./render/renderer.ts";
+import { createStaticStage } from "./render/static-map.ts";
+import { TileType } from "./world/definitions/tiles.ts";
+
 async function main() {
-  const world = createWorld({ size: new V2(1024, 1024), seed: 0 });
-  world.init({ worldCoordinates: new V2(0, 0) });
-  const appContainer = document.getElementById("app");
-  if (!appContainer) return;
-  appContainer.innerHTML = `<p>Created world with size: ${world.size.toString()}</p><p>Created world with chunks: ${world.chunks.size}</p>`;
-  await createRender();
+  const renderer = await createRenderer();
+  const stage = createStaticStage({
+    width: 48,
+    height: 36,
+    origin: new V2(0, 0),
+    zoom: 20,
+    getTileType: (x, y) =>
+      x >= 18 && x < 30 && y >= 8 && y < 28 ? TileType.Dirt : TileType.Grass,
+  });
+  renderer.start(stage);
 }
+
 main().catch(console.error);
